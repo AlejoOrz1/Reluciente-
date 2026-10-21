@@ -226,7 +226,7 @@ Durante las pruebas de resiliencia ejecutando el script `scripts/failover_test.j
 3. El sistema detectó la caída. El Nodo 3 (Árbitro) emitió su voto a favor del Nodo 2.
 4. El Nodo 2 fue promovido automáticamente a estado `PRIMARY`. El script retomó las inserciones exitosamente sin pérdida de información.
 
-![Captura del Failover](./caps/cap1-failover.png)
+![Captura del Failover](caps/cap1-failover.png)
 
 ### 3. Transacciones ACID Multi-documento
 El dominio del proyecto requiere consistencia estricta para la gestión de insumos de estética vehicular. Implementamos la API `session.startTransaction()` para garantizar la atomicidad al momento de registrar una compra.
@@ -235,7 +235,7 @@ El script (`scripts/transaccion_compra.js`) maneja la concurrencia:
 - **Operación Atómica:** Resta el stock del producto y genera un registro en la colección de ventas en un solo bloque indivisible.
 - **Rollback:** Incluye un control de errores que, ante una falla (ej: stock insuficiente), ejecuta `session.abortTransaction()`, devolviendo el inventario a su estado original y cancelando la facturación.
 
-![Transacción Exitosa](./caps/cap2-transaccion.png)
+![Transacción Exitosa](caps/cap2-transaccion.png)
 
 ### 4. Reporte de Securización (Security by Design)
 Para mitigar el riesgo de secuestro de datos por exposición de puertos libres, se blindó la infraestructura aplicando el siguiente protocolo:
@@ -243,7 +243,7 @@ Para mitigar el riesgo de secuestro de datos por exposición de puertos libres, 
 - Se generó e implementó un archivo encriptado (`mongo.key`) para asegurar y restringir la comunicación interna exclusiva entre los tres nodos del clúster.
 - **Principio de Privilegios Mínimos:** Se erradicó por completo el acceso anónimo. Se creó un rol `adminMaster` aislado y un usuario de aplicación específico con privilegios de lectura/escritura únicamente sobre `reluciente_db`.
 
-![Rechazo de acceso anónimo](./caps/cap3-seguridad.png)
+![Rechazo de acceso anónimo](caps/cap3-seguridad.png)
 
 
 
