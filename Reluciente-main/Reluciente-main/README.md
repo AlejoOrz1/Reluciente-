@@ -208,6 +208,46 @@ Da de baja un producto descontinuado, exigiendo stock 0 como condición extra pa
 
 
 
+---
+
+## Fase 3 - Resiliencia, Transacciones y Securización
+
+### 1. Diagrama de Arquitectura (Replica Set)
+La infraestructura utiliza un Conjunto de Réplicas (Replica Set) de 3 nodos para garantizar tolerancia a fallos y alta disponibilidad.
+
+* **Nodo 1 (Primario - Port 27017):** Recibe todas las operaciones de lectura y escritura de la aplicación.
+* **Nodo 2 (Secundario - Port 27018):** Replica asíncronamente los datos. Está listo para asumir si el primario cae.
+* **Nodo 3 (Árbitro - Port 27019):** No almacena datos del dominio. Solo participa en el proceso de votación (Election) para desempatar y elegir un nuevo primario ante una caída.
+
+### 2. Bitácora del Failover
+Durante las pruebas de resiliencia ejecutando el script `scripts/failover_test.js`:
+1. Se inició la inserción de registros de actividad a un ritmo de 1 por segundo.
+2. Se detuvo deliberadamente el proceso `mongod` del Nodo Primario.
+3. El sistema detectó la caída. El Nodo 3 (Árbitro) emitió su voto a favor del Nodo 2.
+4. El Nodo 2 fue promovido automáticamente a estado `PRIMARY`. El script retomó las inserciones exitosamente sin pérdida de información.
+
+![Captura del Failover](./caps/cap1-failover.png)
+
+### 3. Transacciones ACID Multi-documento
+El dominio del proyecto requiere consistencia estricta para la gestión de insumos de estética vehicular. Implementamos la API `session.startTransaction()` para garantizar la atomicidad al momento de registrar una compra.
+
+El script (`scripts/transaccion_compra.js`) maneja la concurrencia:
+- **Operación Atómica:** Resta el stock del producto y genera un registro en la colección de ventas en un solo bloque indivisible.
+- **Rollback:** Incluye un control de errores que, ante una falla (ej: stock insuficiente), ejecuta `session.abortTransaction()`, devolviendo el inventario a su estado original y cancelando la facturación.
+
+![Transacción Exitosa](./caps/cap2-transaccion.png)
+
+### 4. Reporte de Securización (Security by Design)
+Para mitigar el riesgo de secuestro de datos por exposición de puertos libres, se blindó la infraestructura aplicando el siguiente protocolo:
+- Se activó la directiva `--auth` requiriendo autenticación obligatoria para cualquier operación.
+- Se generó e implementó un archivo encriptado (`mongo.key`) para asegurar y restringir la comunicación interna exclusiva entre los tres nodos del clúster.
+- **Principio de Privilegios Mínimos:** Se erradicó por completo el acceso anónimo. Se creó un rol `adminMaster` aislado y un usuario de aplicación específico con privilegios de lectura/escritura únicamente sobre `reluciente_db`.
+
+![Rechazo de acceso anónimo](./caps/cap3-seguridad.png)
+
+
+
+
 
 
 
